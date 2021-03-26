@@ -14,13 +14,10 @@ from captcha_solver import util
 from captcha_solver.audio import SolveAudio
 from captcha_solver.base import Base
 from captcha_solver.exceptions import SafePassage, ButtonError, IframeError, TryAgain, ResolveMoreLater
-from captcha_solver.image import SolveImage
-from captcha_solver.util import get_random_proxy
 
 
 class Solver(Base):
-    def __init__(self, pageurl, loop=None, proxy=None, proxy_auth=None, options=None, lang='en-US', chromePath=None,
-                 **kwargs):
+    def __init__(self, pageurl, loop=None, proxy=None, proxy_auth=None, options=None, lang='en-US', chromePath=None, **kwargs):
         self.url = pageurl
         self.loop = loop or util.get_event_loop()
         self.proxy = proxy
@@ -28,8 +25,7 @@ class Solver(Base):
         self.options = merge_dict({} if options is None else options, kwargs)
         self.chromePath = chromePath
 
-        super(Solver, self).__init__(loop=loop, proxy=proxy, proxy_auth=proxy_auth, language=lang, options=options,
-                                     chromePath=chromePath)
+        super(Solver, self).__init__(loop=loop, proxy=proxy, proxy_auth=proxy_auth, language=lang, options=options, chromePath=chromePath)
 
     async def start(self):
         """Begin solving"""
@@ -100,20 +96,9 @@ class Solver(Base):
             return self.get_code(result)
 
     async def _solve(self):
-        """Select method solver"""
-        proxy = get_random_proxy() if self.proxy == 'auto' else self.proxy
-        print(self.method)
-        if self.method == 'images':
-            self.log('Using Image Solver')
-            self.image = SolveImage(page=self.page, image_frame=self.image_frame, loop=self.loop, proxy=proxy,
-                                    proxy_auth=self.proxy_auth, options=self.options, chromePath=self.chromePath)
-            solve = self.image.solve_by_image
-        else:
-            self.log('Using Audio Solver')
-            self.audio = SolveAudio(page=self.page, image_frame=self.image_frame, loop=self.loop, proxy=proxy,
-                                    proxy_auth=self.proxy_auth, options=self.options, chromePath=self.chromePath)
-            solve = self.audio.solve_by_audio
-
+        self.log('Using Audio Solver')
+        self.audio = SolveAudio(page=self.page, image_frame=self.image_frame, loop=self.loop, proxy=self.proxy, proxy_auth=self.proxy_auth, options=self.options, chromePath=self.chromePath)
+        solve = self.audio.solve_by_audio
         try:
             result = await self.loop.create_task(solve())
             return await self.get_code(result)

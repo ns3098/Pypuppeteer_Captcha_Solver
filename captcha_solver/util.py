@@ -20,8 +20,6 @@ __all__ = [
     "save_file",
     "load_file",
     "get_page",
-    "get_random_proxy",
-    "get_proxy",
     "serialize",
     "deserialize",
     "patch_pyppeteer"
@@ -108,29 +106,6 @@ def split_image(image_obj, pieces, save_to):
     for x, y in itertools.product(range(row_length), repeat=2):
         cropped = image_obj.crop((interval * x, interval * y, interval * (x + 1), interval * (y + 1)))
         cropped.save(os.path.join(save_to, f'{y * row_length + x}.jpg'))
-
-
-def get_proxies():
-    """Get free proxy list of https://free-proxy-list.net/"""
-    parser = BeautifulSoup(get_page('https://free-proxy-list.net/'), "html.parser")
-    proxies = list()
-    for element in parser.find('table', {'id': 'proxylisttable'}).find_all('tr')[1:-1]:
-        more = element.find_all('td')[:2]
-        proxies.append(
-            str(more[0]).replace('<td>', '').replace('</td>', '') + ':' + str(more[1]).replace('<td>', '').replace(
-                '</td>', '').replace('https://', '').replace('http://', ''))
-    return proxies
-
-
-def get_proxy(proxys):
-    """Select one proxy list"""
-    result = random.choice(proxys)
-    return result['ip'] + ':' + result['port']
-
-
-def get_random_proxy():
-    """Get random one proxy list"""
-    return random.choice(get_proxies())
 
 
 def download_zip(url: str) -> BytesIO:

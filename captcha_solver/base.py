@@ -19,7 +19,7 @@ from pyppeteer_stealth import stealth
 
 from captcha_solver import package_dir
 from captcha_solver.exceptions import SafePassage, TryAgain
-from captcha_solver.util import patch_pyppeteer, get_event_loop, load_file, get_random_proxy
+from captcha_solver.util import patch_pyppeteer, get_event_loop, load_file
 
 if len(logging.root.handlers) == 0:
     logging.basicConfig(format="%(asctime)s %(message)s")
@@ -58,7 +58,6 @@ class Base:
     if debug:
         logger.setLevel("DEBUG")
     headless = settings["headless"]
-    method = settings["method"]
     keyboard_traverse = settings["keyboard_traverse"]
     page_load_timeout = settings["timeout"]["page_load"] * 1000
     click_timeout = settings["timeout"]["click"] * 1000
@@ -255,8 +254,6 @@ class Base:
             '--lang="{0}"'.format(self.language),
             '--user-agent="{0}"'.format(agent)]
         if self.proxy:
-            if self.proxy == 'auto':
-                self.proxy = get_random_proxy()
             args.append(f"--proxy-server={self.proxy}")
         if "args" in self.options:
             args.extend(self.options.pop("args"))
