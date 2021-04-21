@@ -19,7 +19,7 @@ from pyppeteer_stealth import stealth
 
 from captcha_solver import package_dir
 from captcha_solver.exceptions import SafePassage, TryAgain
-from captcha_solver.util import patch_pyppeteer, get_event_loop, load_file
+from captcha_solver.util import get_event_loop, load_file
 
 if len(logging.root.handlers) == 0:
     logging.basicConfig(format="%(asctime)s %(message)s")
@@ -34,7 +34,6 @@ try:
 except FileNotFoundError:
     logging.error(
         "Solver can't run without a configuration file!\n"
-        "An example (captcha_solver.example.yaml) has been copied to your folder."
     )
 
     copyfile(
@@ -65,7 +64,6 @@ class Base:
     speech_service = settings["speech"]["service"]
     speech_secondary_service = settings["speech"]["secondary_service"]
     jquery_data = os.path.join(package_dir, settings["data"]["jquery_js"])
-    pictures = os.path.join(package_dir, settings['data']['pictures'])
 
     def __init__(self, loop=None, proxy=None, proxy_auth=None, options=None, language='en-US', chromePath=None, **kwargs):
         self.options = merge_dict({} if options is None else options, kwargs)
@@ -75,7 +73,7 @@ class Base:
         self.language = language
         self.chromePath = chromePath
 
-        patch_pyppeteer()  # Patch Pyppeter (Fix InvalidStateError and Download Chrome)
+        import pyppdf.patch_pyppeteer  # Patch Pyppeter (Fix InvalidStateError and Download Chrome)
 
     async def get_frames(self):
         """Get frames to checkbox and image_frame of reCaptcha"""
@@ -275,26 +273,6 @@ class Base:
         self.page = pages[0]  # Set first page
         return browser
 
-    async def page_switch(self, index=0):
-        """Switch actual page"""
-        self.page = (await self.browser.pages())[index]  # Set Actual Page
-        self.page_index = index  # Update index
-        await self.page.bringToFront()  # Focus new page
-
-    async def block_images_css(self):
-        """Reject requests to all image and css resource types"""
-
-        async def handle_request(request):
-            try:
-                if request.resourceType == 'image' and request.resourceType == 'stylesheet':
-                    await request.abort()
-                else:
-                    await request.continue_()
-            except NetworkError:
-                pass
-
-        await self.page.setRequestInterception(True)  # Enable interception
-        self.page.on('request', handle_request)
 
     async def set_cookies(self, cookies=None):
         """Set cookie list to current page"""
@@ -317,13 +295,6 @@ class Base:
         """Enable bypassing of page's Content-Security-Policy."""
         await self.page._client.send("Page.setBypassCSP", {'enabled': True})
 
-    @staticmethod
-    def enter_after_text(text=None):
-        """Insert Enter after of text"""
-        from six import unichr
-        return text + ''.join(map(unichr, [13])) if text else ''.join(map(unichr, [13]))
-
-    # Events
     async def on_goto(self):
         """Run before to open URL"""
         pass

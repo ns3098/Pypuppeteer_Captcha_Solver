@@ -137,8 +137,6 @@ class SolveAudio(Base):
             answer = await self.get_answer(audio_data, self.service)
             if answer is not None:
                 self.log(f'Received answer "{answer}"')
-                answer = await self.add_error_humans_to_text(answer)
-                self.log(f'Received human answer "{answer}"')
                 return answer
             elif self.service is self.speech_service.lower():
                 return None  # Secondary Recognition
@@ -172,28 +170,17 @@ class SolveAudio(Base):
 
     async def get_answer(self, audio_data, service):
         """Get answer text from API selected (Primary and Secondary)"""
-        if service in ["azure", "pocketsphinx", "deepspeech", "azurespeech", "google", "wit.ai"]:
-            self.log('Initialize a new recognizer')
-            if service == "google":
-                self.log('Using Google Speech Recognition')
-                speech = Google()
-            else:
-                self.log('Using Wit.AI Recognition')
-                speech = WitAI()
-            tmpd = tempfile.mkdtemp()
-            tmpf = os.path.join(tmpd, "audio.mp3")
-            await util.save_file(tmpf, data=audio_data, binary=True)
-            answer = await self.loop.create_task(speech.get_text(tmpf))
-            shutil.rmtree(tmpd)
+        self.log('Initialize a new recognizer')
+        if service == "google":
+            self.log('Using Google Speech Recognition')
+            speech = Google()
         else:
-            speech = Google()  # Set default Speech (Google is Free)
-            answer = await self.loop.create_task(speech.get_text(audio_data))
+            self.log('Using Wit.AI Recognition')
+            speech = WitAI()
+        tmpd = tempfile.mkdtemp()
+        tmpf = os.path.join(tmpd, "audio.mp3")
+        await util.save_file(tmpf, data=audio_data, binary=True)
+        answer = await self.loop.create_task(speech.get_text(tmpf))
+        shutil.rmtree(tmpd)
         return answer
 
-    async def add_error_humans_to_text(self, answer):
-        """Create Imperfections in text_output (The Humans is not perfect)"""
-        answer = answer[:-1] if 6 < len(answer) < 20 else answer
-        answer = answer.split(' ')[0] + ' ' + answer.split(' ')[1] \
-            if 30 > len(answer) > 20 and len(answer.split(' ')) > 2 else answer
-        answer = answer if answer[-1:] != ' ' else answer[:-1]
-        return answer

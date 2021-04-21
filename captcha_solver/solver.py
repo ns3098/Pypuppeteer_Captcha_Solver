@@ -78,7 +78,7 @@ class Solver(Base):
 
     async def solve(self):
         """Click checkbox, otherwise attempt to decipher image/audio"""
-        self.log('Solvering ...')
+        self.log('Solving ...')
         try:
             await self.get_frames()
         except Exception:

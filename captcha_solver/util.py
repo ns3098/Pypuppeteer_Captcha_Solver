@@ -3,26 +3,17 @@
 
 """ Utility functions. """
 import asyncio
-import glob
-import itertools
-import pickle
-import random
-from math import sqrt
-
 import aiofiles
-import certifi
 import requests
-from bs4 import BeautifulSoup
 from pyppeteer.chromium_downloader import *
+from requests.auth import HTTPProxyAuth
+
 
 __all__ = [
     'get_event_loop',
     "save_file",
     "load_file",
     "get_page",
-    "serialize",
-    "deserialize",
-    "patch_pyppeteer"
 ]
 
 NO_PROGRESS_BAR = os.environ.get('PYPPETEER_NO_PROGRESS_BAR', '')
@@ -65,119 +56,19 @@ async def get_page(url, proxy=None, proxy_auth=None, binary=False, verify=False,
     """Get data of the page (File binary of Response text)"""
     urllib3.disable_warnings()
     proxies = None
-    if proxy:
-        if proxy_auth:
-            proxy = proxy.replace("http://", "")
-            username = proxy_auth['username']
-            password = proxy_auth['password']
-            proxies = {
-                "http": f"http://{username}:{password}@{proxy}",
-                "https": f"http://{username}:{password}@{proxy}"}
-        else:
-            proxies = {"http": proxy, "https": proxy}
+    auth = None
+    if proxy and proxy_auth:
+        proxies = {"http": proxy, "https": proxy}
+        auth = HTTPProxyAuth(proxy_auth['username'], proxy_auth['password'])
     retry = 3  # Retry 3 times
     while retry > 0:
         try:
             with requests.Session() as session:
-                response = session.get(url, proxies=proxies, verify=verify, timeout=timeout)
+                session.proxy = proxies
+                session.auth = auth
+                response = session.get(url, verify=verify, timeout=timeout)
                 if binary:
                     return response.content
                 return response.text
         except requests.exceptions.ConnectionError:
             retry -= 1
-
-
-def serialize(obj, p):
-    """Must be synchronous to prevent corrupting data"""
-    with open(p, "wb") as f:
-        pickle.dump(obj, f)
-
-
-async def deserialize(p):
-    data = await load_file(p, binary=True)
-    return pickle.loads(data)
-
-
-def split_image(image_obj, pieces, save_to):
-    """Splits an image into constituent pictures of x"""
-    width, height = image_obj.size
-    row_length = int(sqrt(pieces))
-    interval = width // row_length
-    for x, y in itertools.product(range(row_length), repeat=2):
-        cropped = image_obj.crop((interval * x, interval * y, interval * (x + 1), interval * (y + 1)))
-        cropped.save(os.path.join(save_to, f'{y * row_length + x}.jpg'))
-
-
-def download_zip(url: str) -> BytesIO:
-    """Download data from url."""
-    logger.warning('start patched secure https chromium download.\n'
-                   'Download may take a few minutes.')
-
-    with urllib3.PoolManager(cert_reqs='CERT_REQUIRED',
-                             ca_certs=certifi.where()) as https:
-        # Get data from url.
-        # set preload_content=False means using stream later.
-        data = https.request('GET', url, preload_content=False)
-
-        try:
-            total_length = int(data.headers['content-length'])
-        except (KeyError, ValueError, AttributeError):
-            total_length = 0
-
-        process_bar = tqdm(
-            total=total_length,
-            file=os.devnull if NO_PROGRESS_BAR else None,
-        )
-
-        # 10 * 1024
-        _data = BytesIO()
-        for chunk in data.stream(10240):
-            _data.write(chunk)
-            process_bar.update(len(chunk))
-        process_bar.close()
-
-    logger.warning('\nchromium download done.')
-    return _data
-
-
-def patch_pyppeteer():
-    """Patch pyppeteer of InvalidStateError and SSLError Chrome download"""
-    import pyppeteer.chromium_downloader
-    import pyppeteer.connection
-
-    pyppeteer.chromium_downloader.download_zip = download_zip
-    _connect = pyppeteer.connection.websockets.client.connect
-
-    def connect(*args, ping_interval=None, ping_timeout=None, **kwargs):
-        return _connect(*args, ping_interval=ping_interval,
-                        ping_timeout=ping_timeout, **kwargs)
-
-    pyppeteer.connection.websockets.client.connect = connect
-
-
-def get_train_and_test(path, out):
-    """Create train and test directories to YoloV3"""
-    folders = []
-    for r, d, f in os.walk(path):  # r=root, d=directories, f = files
-        for folder in d:
-            folders.append(os.path.join(r, folder))
-
-    for directory in folders:
-        file = directory.split('/')[-1:][0]
-        print('Extract Train and Test of Directory:', file)
-        # Percentage of images to be used for the test set
-        percentage_test = 20
-        # Create and/or truncate train.txt and test.txt
-        file_train = open(os.path.join(out, 'data_train.txt'), 'a')
-        file_test = open(os.path.join(out, 'data_test.txt'), 'a')
-        # Populate train.txt and test.txt
-        counter = 1
-        index_test = round(100 / percentage_test)
-        for pathAndFilename in glob.iglob(os.path.join(directory, "*.jpg")):
-            title, ext = os.path.splitext(os.path.basename(pathAndFilename))
-            if counter == index_test:
-                counter = 1
-                file_test.write(directory + "/" + title + '.jpg' + "\n")
-            else:
-                file_train.write(directory + "/" + title + '.jpg' + "\n")
-                counter = counter + 1

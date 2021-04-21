@@ -1,6 +1,8 @@
 debug: true  # Output current actions and resulting state in console
 headless: false  # Run Chrome without a GUI (background)
 keyboard_traverse: false  # Emulate keyboard shortcuts instead of mouse behaviors
+method: audio  # Method to resolve captcha (images/audio)
+block_images: false # Reject requests to all image resource types
 
 timeout:
     page_load: 30  # Length to wait for page load in seconds
@@ -9,11 +11,10 @@ timeout:
                   # clicking the widget's checkbox
 
 speech:
-    service: wit.ai # It not required key (english audio)
-    secondary_service: wit.ai # Recommend use wit.ai visit https://wit.ai/
+    service: wit.ai
+    secondary_service: google 
     wit.ai:
         secret_key: JVHWCNWJLWLGN6MFALYLHAPKUFHMNTAC
 
 data:
     jquery_js: data/jquery.js
-    pictures: data/pictures

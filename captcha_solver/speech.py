@@ -2,27 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """ Speech module. Text-to-speech classes - Sphinx, Google, WitAI, Amazon, and Azure. """
-import asyncio
-import json
 import logging
-import os
-import re
-import struct
-import sys
-import time
-from datetime import datetime
-from uuid import uuid4
-
-import aiobotocore
-import aiofiles
-
-import requests
 import speech_recognition as sr
-import websockets
-
 from pydub import AudioSegment
-
-from captcha_solver import util
 from captcha_solver.base import settings
 
 
@@ -36,15 +18,13 @@ async def mp3_to_wav(mp3_filename):
     sound.export(wav_filename, format="wav")
     return wav_filename
 
-
 class Google(object):
     async def get_text(self, mp3_filename):
         wav_filename = await mp3_to_wav(mp3_filename)
-        # Initialize a new recognizer with the audio in memory as source
+     
         recognizer = sr.Recognizer()
         with sr.AudioFile(wav_filename) as source:
-            audio = recognizer.record(source)  # read the entire audio file
-
+            audio = recognizer.record(source)  
         # recognize speech using Google Speech Recognition
         audio_output = None
         try:
@@ -62,18 +42,16 @@ class WitAI(object):
 
     async def get_text(self, mp3_filename):
         wav_filename = await mp3_to_wav(mp3_filename)
-        # Initialize a new recognizer with the audio in memory as source
+       
         recognizer = sr.Recognizer()
         with sr.AudioFile(wav_filename) as source:
-            audio = recognizer.record(source)  # read the entire audio file
+            audio = recognizer.record(source)  
 
-        # recognize speech using WIT.AI Recognition
         audio_output = None
         try:
-            # Llamamos al metodo de reconocimiento por wit y le pasamos el audio, y la key
             audio_output = recognizer.recognize_wit(audio, key=self.API_KEY)
             print("Wit.AI Recognition: " + audio_output)
-        except sr.UnknownValueError:  # Definimos excepciones que se puedan presentar
+        except sr.UnknownValueError: 
             logging.warning("Wit.ai could not understand audio")
         except sr.RequestError as e:
             logging.warning("Could not request results from Wit.ia; {0}".format(e))
